@@ -5,4 +5,4 @@ services:
     volumes:
     - '.:/app'
     working_dir: '/app'
-    command: [./scripts/launch.sh]
+    command: ['./scripts/launch.sh']
