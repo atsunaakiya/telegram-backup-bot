@@ -136,6 +136,7 @@ class BackupHelper:
         # dispatcher.add_handler(MessageHandler(Filters.all, self._on_all_message))
 
         self.poster.init_queue()
+        print("Starting Poster Thread")
         self.ctx.bot.start_polling()
         self.poster.start()
         print("Launching bot...")
