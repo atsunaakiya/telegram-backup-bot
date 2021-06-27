@@ -1,8 +1,8 @@
 import dataclasses
 import json
 
-from lib.data import BotData
-from lib.path import config_path, data_path
+from utils.data import BotData
+from utils.path import config_path, data_path
 
 TELEGRAM = 'telegram'
 ADMIN = 'admin'

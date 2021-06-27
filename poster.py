@@ -6,10 +6,10 @@ from tempfile import NamedTemporaryFile
 
 from webdav3.exceptions import WebDavException, RemoteParentNotFound
 
-from lib.clients import create_bot, create_dav
-from lib.conf import load_config, WEBDAV, ROOT
-from lib.data import CacheFile
-from lib.path import cache_path
+from utils.clients import create_bot, create_dav
+from utils.conf import load_config, WEBDAV, ROOT
+from utils.data import CacheFile
+from utils.path import cache_path
 
 
 class PosterServer:

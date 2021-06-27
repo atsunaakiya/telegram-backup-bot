@@ -1,4 +1,4 @@
-from lib.conf import load_config, TOKEN, TELEGRAM, WEBDAV, HOST, USERNAME, PASSWORD
+from utils.conf import load_config, TOKEN, TELEGRAM, WEBDAV, HOST, USERNAME, PASSWORD
 
 
 def create_bot():
