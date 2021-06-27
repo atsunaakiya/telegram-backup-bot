@@ -66,6 +66,7 @@ class PosterServer:
                 print(f"Upload {cache.parent}/{cache.filename}")
                 success = self.upload(cache)
                 print("OK?")
+                return
                 if success:
                     next_file.unlink()
                     print(f"Send file {cache.parent}/{cache.filename}, rest: {files_n - i - 1}")
