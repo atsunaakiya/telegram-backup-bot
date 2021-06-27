@@ -1,3 +1,4 @@
+import logging
 import os
 import pickle
 import time
@@ -28,7 +29,7 @@ class PosterServer:
         try:
             self.upload_file(f.parent, f.filename, f.payload)
         except WebDavException as err:
-            print(err)
+            logging.error(err)
             return False
         else:
             self.bot.forward_message(f.admin_chat, f.chat_id, f.message_id)
@@ -57,26 +58,26 @@ class PosterServer:
         ]
 
     def run(self):
-        print("Poster launched")
+        logging.info("Poster launched")
         while True:
             files = self.collect_files()
             files_n = len(files)
             for i, next_file in enumerate(files):
                 cache = self.load_file(next_file)
-                print(f"Upload {cache.parent}/{cache.filename}")
+                logging.info(f"Upload {cache.parent}/{cache.filename}")
                 success = self.upload(cache)
                 if success:
                     os.remove(next_file)
-                    print(f"Send file {cache.parent}/{cache.filename}, rest: {files_n - i - 1}")
+                    logging.info(f"Send file {cache.parent}/{cache.filename}, rest: {files_n - i - 1}")
                     time.sleep(10)
                 else:
-                    print("Failed to send file. Wait for 60s.")
+                    logging.info("Failed to send file. Wait for 60s.")
                     time.sleep(60)
             time.sleep(10)
 
 
 def launch_poster():
-    print("Poster started.")
+    logging.info("Poster started.")
     PosterServer().run()
 
 
