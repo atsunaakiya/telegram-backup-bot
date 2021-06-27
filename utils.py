@@ -138,6 +138,7 @@ class BackupHelper:
         self.poster.init_queue()
         self.ctx.bot.start_polling()
         self.poster.start()
+        print("Launching bot...")
         self.ctx.bot.idle()
         self.poster.send_stop()
         # self.ctx.save_data(self.data)
