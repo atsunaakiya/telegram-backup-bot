@@ -149,7 +149,7 @@ class BackupHelper:
         # dispatcher.add_handler(MessageHandler(Filters.all, self._on_all_message))
 
         print("Launching bot...")
-        p = multiprocessing.Process(target=self.run_poster, args=(self.queue,))
+        p = multiprocessing.Process(target=self.run_poster, args=(self.queue,), daemon=False)
         p.start()
 
         print("Starting Poster Thread")
