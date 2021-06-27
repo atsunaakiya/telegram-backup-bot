@@ -5,8 +5,7 @@ services:
     volumes:
     - '.:/app'
     working_dir: '/app'
-    command: ['sleep', '10000000000']
-    links: [poster]
+    command: ['/app/scripts/main.py']
   poster:
     image: python:slim
     volumes:
