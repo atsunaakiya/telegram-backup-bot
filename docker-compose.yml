@@ -5,11 +5,11 @@ services:
     volumes:
     - '.:/app'
     working_dir: '/app'
-    command: ['./scripts/launch.sh']
+    command: ['/app/scripts/launch.sh']
     links: [poster]
   poster:
     image: python:slim
     volumes:
     - '.:/app'
     working_dir: '/app'
-    command: ['./scripts/poster.sh']
+    command: ['/app/scripts/poster.sh']
