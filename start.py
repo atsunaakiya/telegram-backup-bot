@@ -1,10 +1,10 @@
 from telegram import Update
 from telegram.ext import Dispatcher, CommandHandler, CallbackContext
 
-from lib.clients import create_bot
-from lib.conf import load_data, load_config, TELEGRAM, ADMIN, save_data
-from lib.data import BotData
-from lib.path import data_path
+from botlib.clients import create_bot
+from botlib.conf import load_data, load_config, TELEGRAM, ADMIN, save_data
+from botlib.data import BotData
+from botlib.path import data_path
 
 
 class InitHelper:

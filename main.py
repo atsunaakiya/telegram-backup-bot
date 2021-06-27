@@ -6,10 +6,10 @@ from io import BytesIO
 from telegram import Bot, Update, PhotoSize
 from telegram.ext import Dispatcher, MessageHandler, Filters, Updater, CallbackContext
 
-from lib.clients import create_bot
-from lib.conf import load_data
-from lib.data import CacheFile
-from lib.path import cache_path, data_path
+from botlib.clients import create_bot
+from botlib.conf import load_data
+from botlib.data import CacheFile
+from botlib.path import cache_path, data_path
 
 
 class BackupHelper:
