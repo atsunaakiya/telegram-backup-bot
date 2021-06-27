@@ -234,7 +234,7 @@ class PosterClient:
 class PosterServer:
     def __init__(self, ctx: BotContext):
         self.ctx = ctx
-        self.pipe = open(pipe_path, 'r')
+        self.pipe = None
         self.retry_queue = deque()
 
     def fetch_pipe(self):
@@ -273,6 +273,7 @@ class PosterServer:
 
     def run(self):
         print("Poster started.")
+        self.pipe = open(pipe_path, 'r')
         while True:
             if self.retry_queue:
                 next_file: str = self.retry_queue.popleft()
