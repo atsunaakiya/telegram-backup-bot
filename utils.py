@@ -4,12 +4,11 @@ import os
 import pickle
 import time
 import uuid
-from io import StringIO, BytesIO
+from io import BytesIO
 from pathlib import Path
-from queue import Queue
 from tempfile import NamedTemporaryFile
-from threading import Thread, Event
-from typing import Dict, List, IO, Optional
+import multiprocessing
+from typing import Optional
 
 from telegram import Update, Bot, Chat, PhotoSize
 from telegram.ext import Updater, Dispatcher, CommandHandler, CallbackContext, MessageHandler, Filters
@@ -55,15 +54,27 @@ class BotContext:
     def __init__(self):
         with config_path.open() as f:
             config = json.load(f)
-        self.dav = Client({
-            'webdav_hostname': config[WEBDAV][HOST],
-            'webdav_login': config[WEBDAV][USERNAME],
-            'webdav_password': config[WEBDAV][PASSWORD]
-        })
-        self.bot = Updater(config[TELEGRAM][TOKEN])
+        self._dav = None
+        self._bot = None
         self.admin = config[TELEGRAM][ADMIN]
         self.config = config
         self.root = config[WEBDAV][ROOT]
+
+    @property
+    def bot(self) -> Updater:
+        if self._bot is None:
+            self._bot = Updater(self.config[TELEGRAM][TOKEN])
+        return self._bot
+
+    @property
+    def dav(self) -> Client:
+        if self._dav is None:
+            self._dav = Client({
+                'webdav_hostname': self.config[WEBDAV][HOST],
+                'webdav_login': self.config[WEBDAV][USERNAME],
+                'webdav_password': self.config[WEBDAV][PASSWORD]
+            })
+        return self._dav
 
     @staticmethod
     def load_data():
@@ -126,7 +137,9 @@ class BackupHelper:
         self.ctx = ctx
         self.bot = self.ctx.bot.bot
         self.data = ctx.load_data()
-        self.poster = PostThread(ctx)
+
+        self.queue = multiprocessing.Queue()
+        self.poster = PosterClient(self.queue)
 
 
     def start(self):
@@ -135,17 +148,26 @@ class BackupHelper:
         dispatcher.add_handler(MessageHandler(Filters.photo, self._on_photo_message))
         # dispatcher.add_handler(MessageHandler(Filters.all, self._on_all_message))
 
-        self.poster.init_queue()
+        print("Launching bot...")
+        p = multiprocessing.Process(target=self.run_poster, args=(self.queue,))
+        p.start()
+
         print("Starting Poster Thread")
         self.ctx.bot.start_polling()
-        self.poster.start()
-        print("Launching bot...")
         self.ctx.bot.idle()
         self.poster.send_stop()
+        p.join()
         # self.ctx.save_data(self.data)
 
     # def _on_all_message(self, update: Update, context: CallbackContext):
     #     self.notify(update.message.chat_id, update.message.message_id)
+
+    @staticmethod
+    def run_poster(q: multiprocessing.Queue):
+        ctx = BotContext()
+        server = PosterServer(ctx, q)
+        server.init_queue()
+        server.run()
 
     def _on_text_message(self, update: Update, context: CallbackContext):
         msg = update.channel_post or update.edited_channel_post or update.message
@@ -170,7 +192,7 @@ class BackupHelper:
         photo = max(msg.photo, key=self._photo_size)
         chat_id = str(msg.chat_id)
         message_id = msg.message_id
-        if chat_id == self.data.admin_chat and msg.forward_from_chat:
+        if chat_id == str(self.data.admin_chat) and msg.forward_from_chat:
             chat_name = msg.forward_from_chat.title
             from_msg_id = msg.forward_from_message_id
         else:
@@ -188,22 +210,29 @@ class BackupHelper:
         self.poster.put_file(self.data.admin_chat, chat_id, message_id, chat_name, fn, buffer.getvalue())
 
 
-class PostThread(Thread):
-    def __init__(self, ctx: BotContext):
-        super(PostThread, self).__init__()
-        self.ctx = ctx
-        self.queue = Queue()
-
-    def init_queue(self):
-        for n in os.listdir(cache_path):
-            self.queue.put(cache_path / n)
+class PosterClient:
+    def __init__(self, queue: multiprocessing.Queue):
+        self.queue = queue
 
     def put_file(self, admin_chat, chat_id, message_id, parent: str, fn: str, payload: bytes):
         cache = CacheFile(admin_chat, chat_id, message_id, parent, fn, payload)
         target = cache_path / f'{uuid.uuid4().hex}.pkl'
         with target.open('wb') as f:
             pickle.dump(cache, f)
-        self.queue.put(target)
+        self.queue.put(str(target))
+
+    def send_stop(self):
+        self.queue.put(None)
+
+
+class PosterServer:
+    def __init__(self, ctx: BotContext, queue: multiprocessing.Queue):
+        self.ctx = ctx
+        self.queue = queue
+
+    def init_queue(self):
+        for n in os.listdir(cache_path):
+            self.queue.put(str(cache_path / n))
 
     def get_file(self) -> Optional[CacheFile]:
         l = os.listdir(cache_path)
@@ -242,23 +271,19 @@ class PostThread(Thread):
             f.flush()
             self.ctx.dav.upload(fp, f.name)
 
-    def send_stop(self):
-        while self.queue.qsize() > 0:
-            self.queue.get()
-        self.queue.put(None)
-
     def run(self):
         print("Poster started.")
         while True:
-            next_file: Path = self.queue.get()
+            next_file: str = self.queue.get()
+            next_file: Path = Path(next_file)
             if next_file is None:
                 print("Stopping...")
                 break
             cache = self.load_file(next_file)
             success = self.upload(cache)
             if success:
-                print(f"Send file {cache.parent}/{cache.filename}, rest: {self.queue.qsize()}")
                 os.remove(next_file)
+                print(f"Send file {cache.parent}/{cache.filename}, rest: {len(os.listdir(cache_path))}")
                 time.sleep(10)
             else:
                 print("Failed to send file. Wait for 60s.")
