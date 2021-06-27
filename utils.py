@@ -4,11 +4,12 @@ import os
 import pickle
 import time
 import uuid
+from collections import deque
 from io import BytesIO
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 import multiprocessing
-from typing import Optional
+from typing import Optional, IO
 
 from telegram import Update, Bot, Chat, PhotoSize
 from telegram.ext import Updater, Dispatcher, CommandHandler, CallbackContext, MessageHandler, Filters
@@ -20,6 +21,10 @@ config_path = root_path / 'config.json'
 data_path = root_path / 'data.json'
 cache_path = root_path / 'cache'
 cache_path.mkdir(exist_ok=True)
+
+pipe_path = root_path / 'queue.pipe'
+if not pipe_path.exists():
+    os.mkfifo(pipe_path)
 
 TELEGRAM = 'telegram'
 ADMIN = 'admin'
@@ -138,36 +143,18 @@ class BackupHelper:
         self.bot = self.ctx.bot.bot
         self.data = ctx.load_data()
 
-        self.queue = multiprocessing.Queue()
-        self.poster = PosterClient(self.queue)
-
+        self.poster = PosterClient()
 
     def start(self):
         dispatcher: Dispatcher = self.ctx.bot.dispatcher
         dispatcher.add_handler(MessageHandler(Filters.text, self._on_text_message))
         dispatcher.add_handler(MessageHandler(Filters.photo, self._on_photo_message))
-        # dispatcher.add_handler(MessageHandler(Filters.all, self._on_all_message))
 
-        print("Launching bot...")
-        p = multiprocessing.Process(target=self.run_poster, args=(self.queue,), daemon=False)
-        p.start()
-
-        print("Starting Poster Thread")
-        self.ctx.bot.start_polling()
-        self.ctx.bot.idle()
-        self.poster.send_stop()
-        p.join()
-        # self.ctx.save_data(self.data)
-
-    # def _on_all_message(self, update: Update, context: CallbackContext):
-    #     self.notify(update.message.chat_id, update.message.message_id)
-
-    @staticmethod
-    def run_poster(q: multiprocessing.Queue):
-        ctx = BotContext()
-        server = PosterServer(ctx, q)
-        server.init_queue()
-        server.run()
+        print("Waiting for poster...")
+        with self.poster:
+            self.ctx.bot.start_polling()
+            print("Bot Started")
+            self.ctx.bot.idle()
 
     def _on_text_message(self, update: Update, context: CallbackContext):
         msg = update.channel_post or update.edited_channel_post or update.message
@@ -211,35 +198,48 @@ class BackupHelper:
 
 
 class PosterClient:
-    def __init__(self, queue: multiprocessing.Queue):
-        self.queue = queue
+    pipe: Optional[IO]
+
+    def __init__(self):
+        self.pipe = None
+
+    def init_queue(self):
+        self.pipe = open(pipe_path, 'w')
+        for n in os.listdir(cache_path):
+            self.put_pipe(str(cache_path / n))
+
+    def put_pipe(self, s: str):
+        self.pipe.write(s)
+        self.pipe.write('\n')
+        self.pipe.flush()
 
     def put_file(self, admin_chat, chat_id, message_id, parent: str, fn: str, payload: bytes):
         cache = CacheFile(admin_chat, chat_id, message_id, parent, fn, payload)
         target = cache_path / f'{uuid.uuid4().hex}.pkl'
         with target.open('wb') as f:
             pickle.dump(cache, f)
-        self.queue.put(str(target))
+        self.put_pipe(str(target))
 
     def send_stop(self):
-        self.queue.put(None)
+        self.put_pipe('')
+
+    def __enter__(self):
+        self.init_queue()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.send_stop()
+        self.pipe.close()
 
 
 class PosterServer:
-    def __init__(self, ctx: BotContext, queue: multiprocessing.Queue):
+    def __init__(self, ctx: BotContext):
         self.ctx = ctx
-        self.queue = queue
+        self.pipe = open(pipe_path, 'r')
+        self.retry_queue = deque()
 
-    def init_queue(self):
-        for n in os.listdir(cache_path):
-            self.queue.put(str(cache_path / n))
-
-    def get_file(self) -> Optional[CacheFile]:
-        l = os.listdir(cache_path)
-        if l:
-            return self.load_file(cache_path/l[0])
-        else:
-            return None
+    def fetch_pipe(self):
+        line = self.pipe.readline()
+        return line.strip()
 
     def load_file(self, fp: Path):
         with fp.open('rb') as f:
@@ -274,11 +274,17 @@ class PosterServer:
     def run(self):
         print("Poster started.")
         while True:
-            next_file: str = self.queue.get()
-            next_file: Path = Path(next_file)
-            if next_file is None:
+            if self.retry_queue:
+                next_file: str = self.retry_queue.popleft()
+            else:
+                next_file: str = self.fetch_pipe()
+            if next_file == '':
                 print("Stopping...")
                 break
+            next_file: Path = Path(next_file)
+            if not next_file.exists():
+                print("File not exist:", next_file)
+                continue
             cache = self.load_file(next_file)
             success = self.upload(cache)
             if success:
@@ -287,6 +293,6 @@ class PosterServer:
                 time.sleep(10)
             else:
                 print("Failed to send file. Wait for 60s.")
-                self.queue.put(next_file)
+                self.retry_queue.append(next_file)
                 time.sleep(60)
 
