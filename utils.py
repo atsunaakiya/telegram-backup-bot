@@ -257,4 +257,4 @@ class PosterServer:
                 else:
                     print("Failed to send file. Wait for 60s.")
                     time.sleep(60)
-            time.sleep(60 * 5)
+            time.sleep(10)
