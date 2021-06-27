@@ -61,10 +61,10 @@ class PosterServer:
         while True:
             files = self.collect_files()
             files_n = len(files)
-            print("OK")
-            return
             for i, next_file in enumerate(files):
                 cache = self.load_file(next_file)
+                print("OK?")
+                return
                 success = self.upload(cache)
                 if success:
                     next_file.unlink()
