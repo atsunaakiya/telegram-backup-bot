@@ -64,6 +64,7 @@ class PosterServer:
             files_n = len(files)
             for i, next_file in enumerate(files):
                 cache = self.load_file(next_file)
+                print(f"Upload {cache.parent}/{cache.filename}")
                 success = self.upload(cache)
                 if success:
                     next_file.unlink()
