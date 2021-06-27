@@ -57,18 +57,21 @@ class PosterServer:
             for n in os.listdir(cache_path)
         ]
 
+    def on_file(self, next_file):
+        cache = self.load_file(next_file)
+        success = self.upload(cache)
+        return f"{cache.parent}/{cache.filename}", success
+
     def run(self):
         logging.info("Poster launched")
         while True:
             files = self.collect_files()
             files_n = len(files)
             for i, next_file in enumerate(files):
-                cache = self.load_file(next_file)
-                logging.info(f"Upload {cache.parent}/{cache.filename}")
-                success = self.upload(cache)
+                path, success = self.on_file(next_file)
                 if success:
                     os.remove(next_file)
-                    logging.info(f"Send file {cache.parent}/{cache.filename}, rest: {files_n - i - 1}")
+                    logging.info(f"Send file {path}, rest: {files_n - i - 1}")
                     time.sleep(10)
                 else:
                     logging.info("Failed to send file. Wait for 60s.")
