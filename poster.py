@@ -58,10 +58,11 @@ class PosterServer:
 
     def run(self):
         print("Poster launched")
-        return
         while True:
             files = self.collect_files()
             files_n = len(files)
+            print("OK")
+            return
             for i, next_file in enumerate(files):
                 cache = self.load_file(next_file)
                 success = self.upload(cache)
