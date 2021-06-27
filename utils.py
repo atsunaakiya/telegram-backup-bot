@@ -1,5 +1,6 @@
 import dataclasses
 import json
+import logging
 import os
 import pickle
 import time
@@ -272,9 +273,9 @@ class PosterServer:
             self.ctx.dav.upload(fp, f.name)
 
     def run(self):
-        print("Poster started.")
+        logging.info("Poster started.")
         self.pipe = open(pipe_path, 'r')
-        print("Poster started 2.")
+        logging.info("Poster started. 2")
         return
         while True:
             if self.retry_queue:
