@@ -31,7 +31,6 @@ class PosterServer:
             print(err)
             return False
         else:
-            print("OK?")
             self.bot.forward_message(f.admin_chat, f.chat_id, f.message_id)
             return True
 
@@ -66,6 +65,7 @@ class PosterServer:
                 cache = self.load_file(next_file)
                 print(f"Upload {cache.parent}/{cache.filename}")
                 success = self.upload(cache)
+                print("OK?")
                 if success:
                     next_file.unlink()
                     print(f"Send file {cache.parent}/{cache.filename}, rest: {files_n - i - 1}")
