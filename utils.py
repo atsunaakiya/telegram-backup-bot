@@ -24,8 +24,6 @@ cache_path = root_path / 'cache'
 cache_path.mkdir(exist_ok=True)
 
 pipe_path = root_path / 'queue.pipe'
-if not pipe_path.exists():
-    os.mkfifo(pipe_path)
 
 TELEGRAM = 'telegram'
 ADMIN = 'admin'
@@ -205,7 +203,11 @@ class PosterClient:
         self.pipe = None
 
     def init_queue(self):
-        self.pipe = open(pipe_path, 'w')
+        while not pipe_path.exists():
+            print('Waiting for file creation:', pipe_path)
+            time.sleep(10)
+        fd = os.open(pipe_path, os.O_RDWR)
+        self.pipe = os.fdopen(fd, 'w')
         for n in os.listdir(cache_path):
             self.put_pipe(str(cache_path / n))
 
@@ -273,10 +275,12 @@ class PosterServer:
             self.ctx.dav.upload(fp, f.name)
 
     def run(self):
-        logging.info("Poster started.")
-        self.pipe = open(pipe_path, 'r')
-        logging.info("Poster started. 2")
-        return
+        print("Poster launched")
+        if pipe_path.exists():
+            pipe_path.unlink(missing_ok=True)
+        os.mkfifo(pipe_path)
+        fd = os.open(pipe_path, os.O_RDWR)
+        self.pipe = os.fdopen(fd, 'r')
         while True:
             if self.retry_queue:
                 next_file: str = self.retry_queue.popleft()
@@ -299,4 +303,5 @@ class PosterServer:
                 print("Failed to send file. Wait for 60s.")
                 self.retry_queue.append(next_file)
                 time.sleep(60)
+        pipe_path.unlink(missing_ok=True)
 
