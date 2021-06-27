@@ -272,9 +272,9 @@ class PosterServer:
             self.ctx.dav.upload(fp, f.name)
 
     def run(self):
+        self.pipe = open(pipe_path, 'r')
         print("Poster started.")
         return
-        self.pipe = open(pipe_path, 'r')
         while True:
             if self.retry_queue:
                 next_file: str = self.retry_queue.popleft()

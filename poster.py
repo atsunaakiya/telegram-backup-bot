@@ -2,9 +2,7 @@ from utils import BotContext, PosterServer
 
 
 def launch_poster():
-    print("Started")
     ctx = BotContext()
-    print("Context OK")
     PosterServer(ctx).run()
 
 
