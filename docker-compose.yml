@@ -6,6 +6,7 @@ services:
     - '.:/app'
     working_dir: '/app'
     command: ['./scripts/launch.sh']
+    links: [poster]
   poster:
     image: python:slim
     volumes:
