@@ -75,6 +75,7 @@ class PosterServer:
 
 
 def launch_poster():
+    print("Poster started.")
     PosterServer().run()
 
 
