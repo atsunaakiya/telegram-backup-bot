@@ -58,6 +58,7 @@ class PosterServer:
 
     def run(self):
         print("Poster launched")
+        return
         while True:
             files = self.collect_files()
             files_n = len(files)
