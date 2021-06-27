@@ -5,7 +5,7 @@ services:
     volumes:
     - '.:/app'
     working_dir: '/app'
-    command: ['/app/scripts/main.py']
+    command: ['/app/scripts/launch.py']
   poster:
     image: python:slim
     volumes:
