@@ -31,6 +31,7 @@ class PosterServer:
             print(err)
             return False
         else:
+            print("OK?")
             self.bot.forward_message(f.admin_chat, f.chat_id, f.message_id)
             return True
 
@@ -63,8 +64,6 @@ class PosterServer:
             files_n = len(files)
             for i, next_file in enumerate(files):
                 cache = self.load_file(next_file)
-                print("OK?")
-                return
                 success = self.upload(cache)
                 if success:
                     next_file.unlink()
