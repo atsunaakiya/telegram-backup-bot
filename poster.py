@@ -73,7 +73,7 @@ class PosterServer:
                 else:
                     logging.info("Failed to send file. Wait for 60s.")
                     time.sleep(60)
-            time.sleep(10)
+            time.sleep(5*60)
 
 
 def launch_poster():
