@@ -273,6 +273,7 @@ class PosterServer:
 
     def run(self):
         print("Poster started.")
+        return
         self.pipe = open(pipe_path, 'r')
         while True:
             if self.retry_queue:
