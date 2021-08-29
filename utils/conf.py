@@ -7,12 +7,7 @@ from utils.path import config_path, data_path
 TELEGRAM = 'telegram'
 ADMIN = 'admin'
 TOKEN = 'token'
-WEBDAV = 'webdav'
-HOST = 'host'
-ROOT = 'root'
-USERNAME = 'username'
-PASSWORD = 'password'
-
+TARGET = 'target'
 
 def load_config():
     with config_path.open() as f:
